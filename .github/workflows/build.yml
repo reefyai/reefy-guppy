@@ -1,0 +1,50 @@
+name: Build reefy-guppy image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Dockerfile'
+      - 'server.py'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    runs-on: [self-hosted]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute version tag
+        id: tag
+        run: |
+          # Tag: <YYYY.MM.DD>-<run_number>. Immutable per build; same-day
+          # rebuilds get -1, -2, ... so apps/guppy/app.json can pin to a
+          # specific tag and pick up rebuilds without hash games.
+          echo "version=$(date -u +%Y.%m.%d)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ghcr.io/reefyai/reefy-guppy:${{ steps.tag.outputs.version }}
+            ghcr.io/reefyai/reefy-guppy:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - run: echo "Pushed ghcr.io/reefyai/reefy-guppy:${{ steps.tag.outputs.version }}"
