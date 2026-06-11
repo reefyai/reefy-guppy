@@ -42,7 +42,12 @@ jobs:
 
       - name: Verify digests match
         run: |
+          # GHCR read-after-write can lag the push by a few seconds -
+          # retry the inspect instead of failing the run on a race.
           src=$(docker buildx imagetools inspect "ghcr.io/reefyai/reefy-guppy:${{ inputs.source_tag }}" --format '{{json .Manifest.Digest}}')
-          new=$(docker buildx imagetools inspect "ghcr.io/reefyai/reefy-guppy:${{ inputs.new_tag }}" --format '{{json .Manifest.Digest}}')
+          for i in 1 2 3 4 5; do
+            new=$(docker buildx imagetools inspect "ghcr.io/reefyai/reefy-guppy:${{ inputs.new_tag }}" --format '{{json .Manifest.Digest}}' 2>/dev/null) && break
+            echo "new tag not visible yet (attempt $i), retrying in 3s"; sleep 3
+          done
           echo "source=$src new=$new"
           test "$src" = "$new"
