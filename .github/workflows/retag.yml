@@ -1,0 +1,48 @@
+name: Retag image (manifest copy)
+
+# Copy an existing tag's manifest to a new tag with no rebuild (same
+# digest, zero pull cost on devices that already have the source tag).
+# Used to maintain the version PAIR for the reefy-service e2e
+# app-upgrade scenario: e2e-baseline (the catalog default installs pin
+# to) and e2e-next (the upgrade target) point at the same content.
+# When guppy is genuinely rebuilt, re-run this twice to re-point both
+# aliases at the new build's tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: 'Existing tag to copy (e.g. 2026.05.09-1)'
+        required: true
+      new_tag:
+        description: 'New tag to create (e.g. e2e-baseline)'
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  retag:
+    # GitHub-hosted: the self-hosted runner has had TLS flakiness to
+    # ghcr.io, and this job is a single manifest copy.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy manifest to new tag
+        run: |
+          docker buildx imagetools create \
+            -t "ghcr.io/reefyai/reefy-guppy:${{ inputs.new_tag }}" \
+            "ghcr.io/reefyai/reefy-guppy:${{ inputs.source_tag }}"
+
+      - name: Verify digests match
+        run: |
+          src=$(docker buildx imagetools inspect "ghcr.io/reefyai/reefy-guppy:${{ inputs.source_tag }}" --format '{{json .Manifest.Digest}}')
+          new=$(docker buildx imagetools inspect "ghcr.io/reefyai/reefy-guppy:${{ inputs.new_tag }}" --format '{{json .Manifest.Digest}}')
+          echo "source=$src new=$new"
+          test "$src" = "$new"
