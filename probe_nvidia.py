@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ctypes
+import os
+import time
 
 
 def _check(code, operation):
@@ -38,9 +40,20 @@ def run():
     argument = ctypes.c_uint64(device_memory.value)
     arguments = (ctypes.c_void_p * 1)(ctypes.cast(
         ctypes.byref(argument), ctypes.c_void_p))
-    _check(cuda.cuLaunchKernel(
-        function, 1, 1, 1, 1, 1, 1, 0, None, arguments, None),
-        'cuLaunchKernel')
+    seconds = float(os.getenv('REEFY_HARDWARE_PROBE_SECONDS', '0.2'))
+    if seconds < 0 or seconds > 120:
+        raise RuntimeError('duration must be between 0 and 120 seconds')
+    started = time.monotonic()
+    launches = 0
+    while True:
+        _check(cuda.cuLaunchKernel(
+            function, 1, 1, 1, 1, 1, 1, 0, None, arguments, None),
+            'cuLaunchKernel')
+        launches += 1
+        if launches % 4096 == 0:
+            _check(cuda.cuCtxSynchronize(), 'cuCtxSynchronize')
+        if time.monotonic() - started >= seconds:
+            break
     _check(cuda.cuCtxSynchronize(), 'cuCtxSynchronize')
     answer = ctypes.c_uint32()
     _check(cuda.cuMemcpyDtoH_v2(
@@ -65,6 +78,7 @@ def run():
         'device_count': count.value,
         'device_name': name.value.decode(errors='replace'),
         'cuda_kernel_result': answer.value,
+        'kernel_launches': launches,
         'nvml_gpu_utilization_pct': utilization.gpu,
         'nvml_memory_utilization_pct': utilization.memory,
     }

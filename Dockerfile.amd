@@ -1,0 +1,14 @@
+FROM rocm/dev-ubuntu-24.04:7.2.4 AS build
+
+COPY probe_amd.cpp /src/probe_amd.cpp
+RUN hipcc --offload-arch=gfx1200 -O2 \
+    /src/probe_amd.cpp -o /src/hip_probe
+
+FROM rocm/dev-ubuntu-24.04:7.2.4
+
+WORKDIR /app
+COPY --from=build /src/hip_probe /app/hip_probe
+COPY hardware_probe_server.py probe_amd.py /app/
+ENV REEFY_HARDWARE_PROBE=probe_amd
+EXPOSE 8080
+CMD ["python3", "/app/hardware_probe_server.py"]

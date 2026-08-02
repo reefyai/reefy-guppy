@@ -10,8 +10,11 @@ on:
       - 'hardware_probe_server.py'
       - 'probe_nvidia.py'
       - 'probe_intel.py'
+      - 'probe_amd.py'
+      - 'probe_amd.cpp'
       - 'Dockerfile.nvidia'
       - 'Dockerfile.intel'
+      - 'Dockerfile.amd'
       - '.github/workflows/build.yml'
   workflow_dispatch:
 
@@ -58,7 +61,7 @@ jobs:
     runs-on: [self-hosted]
     strategy:
       matrix:
-        accelerator: [nvidia, intel]
+        accelerator: [nvidia, amd, intel]
     steps:
       - uses: actions/checkout@v4
 
