@@ -1,0 +1,7 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+COPY hardware_probe_server.py probe_nvidia.py /app/
+ENV REEFY_HARDWARE_PROBE=probe_nvidia
+EXPOSE 8080
+CMD ["python3", "/app/hardware_probe_server.py"]

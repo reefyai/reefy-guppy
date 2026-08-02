@@ -7,6 +7,11 @@ on:
     paths:
       - 'Dockerfile'
       - 'server.py'
+      - 'hardware_probe_server.py'
+      - 'probe_nvidia.py'
+      - 'probe_intel.py'
+      - 'Dockerfile.nvidia'
+      - 'Dockerfile.intel'
       - '.github/workflows/build.yml'
   workflow_dispatch:
 
@@ -48,3 +53,28 @@ jobs:
           cache-to: type=gha,mode=max
 
       - run: echo "Pushed ghcr.io/reefyai/reefy-guppy:${{ steps.tag.outputs.version }}"
+
+  build-push-hardware-probes:
+    runs-on: [self-hosted]
+    strategy:
+      matrix:
+        accelerator: [nvidia, intel]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.accelerator }}
+          push: true
+          tags: ghcr.io/reefyai/reefy-guppy:${{ matrix.accelerator }}-e2e
+          cache-from: type=gha,scope=${{ matrix.accelerator }}-e2e
+          cache-to: type=gha,mode=max,scope=${{ matrix.accelerator }}-e2e
