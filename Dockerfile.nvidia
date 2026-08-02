@@ -1,13 +1,6 @@
-FROM nvidia/cuda:13.2.1-devel-ubuntu24.04 AS build
-
-COPY probe_nvidia.cu /src/probe_nvidia.cu
-RUN nvcc --fatbin -arch=sm_120 \
-    /src/probe_nvidia.cu -o /src/probe_nvidia.fatbin
-
 FROM python:3.12-slim
 
 WORKDIR /app
-COPY --from=build /src/probe_nvidia.fatbin /app/probe_nvidia.fatbin
 COPY hardware_probe_server.py probe_nvidia.py /app/
 ENV REEFY_HARDWARE_PROBE=probe_nvidia
 EXPOSE 8080

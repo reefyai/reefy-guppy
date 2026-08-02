@@ -27,9 +27,9 @@ def run():
 
     context = ctypes.c_void_p()
     _check(cuda.cuCtxCreate_v2(ctypes.byref(context), 0, device), 'cuCtxCreate')
+    ptx = b'''\n.version 7.0\n.target sm_50\n.address_size 64\n.visible .entry write_answer(.param .u64 output) {\n.reg .b64 ptr;\n.reg .b32 value;\nld.param.u64 ptr, [output];\nmov.u32 value, 42;\nst.global.u32 [ptr], value;\nret;\n}\n'''
     module = ctypes.c_void_p()
-    _check(cuda.cuModuleLoad(
-        ctypes.byref(module), b'/app/probe_nvidia.fatbin'), 'cuModuleLoad')
+    _check(cuda.cuModuleLoadData(ctypes.byref(module), ptx), 'cuModuleLoadData')
     function = ctypes.c_void_p()
     _check(cuda.cuModuleGetFunction(
         ctypes.byref(function), module, b'write_answer'), 'cuModuleGetFunction')
