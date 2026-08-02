@@ -9,6 +9,7 @@ on:
       - 'server.py'
       - 'hardware_probe_server.py'
       - 'probe_nvidia.py'
+      - 'probe_nvidia.cu'
       - 'probe_intel.py'
       - 'probe_amd.py'
       - 'probe_amd.cpp'
