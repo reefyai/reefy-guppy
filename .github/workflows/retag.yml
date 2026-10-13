@@ -26,7 +26,7 @@ jobs:
   retag:
     # GitHub-hosted: the self-hosted runner has had TLS flakiness to
     # ghcr.io, and this job is a single manifest copy.
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["ubuntu-latest"]' || '["self-hosted","Linux","X64","big-bird"]') }}
     steps:
       - uses: docker/login-action@v3
         with:
